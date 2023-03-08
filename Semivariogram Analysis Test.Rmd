@@ -1,0 +1,133 @@
+# **Laboratory Final Test on Semivariogram Analysis**
+
+## Introduction
+
+The problem discussed in this project is made as a final test of a session on Elementary Statistics laboratory program (2022) at Bandung Institute of Technology. The laboratory program itself has the objective to let students learn how to use of R programming language and how to interpret data and the output of statistical tools.
+
+## Problems and solutions
+
+At a kingdom, there is an increase of fossil and other organic fuels combustion to accomodate city's activity. The king of the kingdom is concerned about the increase of air pollution that might happen. The king consulted with scientists and they warned the king about the increase of PM~2.5~ (particulate matter 2.5) in the air.
+
+PM~2.5~ is one of the most dangerous pollutant to human health. Because of its miniscule size, this odorless matter can easily enter and disturb respiratory system. It is known that its safe maximum concentration is 35 μm/g^3^.
+
+To respond to this problem, the king ordered you, the famous statistician, to help him. You are asked to model the distribution of PM~2.5~ concentration on the kingdom. You have received data of its PM~2.5~ concentration at 16 different locations distributed equally around the kingdom at a particular time. Assume that the data is a spatial data that fulfill intrinsic stationary.
+
+### Number 1
+
+You want to describe the initial data to the king. Make a scatter plot with dots' size representing concentration value at a location. Explain the area where PM~2.5~ concentration is relatively higher.
+
+#### Solution
+
+```{r}
+# Used libraries
+library(sp)
+library(gstat)
+library(dplyr)
+library(maptools)
+library(ggplot2)
+library(readxl)
+
+# Importing file and converting it to spatial data
+data <- read_excel("/cloud/project/Data PM2,5.xlsx")
+dataSpatial <- data.frame(data)
+coordinates(dataSpatial) <- ~x+y
+
+# Scatter plot
+ggplot(data = as.data.frame(dataSpatial), aes(x,y)) + 
+  geom_point(aes(size = konsentrasi_pm2.5), col = "red", alpha = 0.6) + 
+  ggtitle("PM2.5 Concentration at the Kingdom") + coord_equal() + theme_bw()
+```
+
+Area with higher concentration is located around north-west and center of the kingdom.
+
+### Number 2
+
+Make the plot and table of semivariogram experimental from the data. Make sure that the plot shows a pattern and there is relatively more paired data at each class interval $h$. *(Hint: Use the multiplication of 0.002 as width)*
+
+#### Solution
+
+```{r}
+# Calculating semivariogram experimental values
+
+# One of the alternative which gives expected properties
+(vgm3 <- variogram(konsentrasi_pm2.5 ~ 1, dataSpatial, width = 0.01))
+plot(vgm3, main = "Semivariograqm Experimental: Width 0.01")
+
+```
+
+### Number 3
+
+Decide the best variogram model (exponential, spherical, or Gauss) for the previous semivariogram experimental values. What is the value of psill, nugget (if exist), and range of the model?
+
+#### Solution
+
+```{r}
+# Variogram model fitting, then plotting it
+(fit <- fit.variogram(vgm3, model = vgm(model = c("Exp", "Sph", "Gau"))))
+plot(vgm3, fit)
+```
+
+The best model is spherical with the value of psill is 592.5 and range is 0.04.
+
+### Number 4
+
+Make a contour plot of the concentration value using ordinary Kriging of the previous semivariogram model. *(Hint: use* $n=0.001$ *grid interval)*
+
+#### Solution
+
+```{r}
+# Preparing grid or domain of the plot
+n <- 0.001
+col <- seq(dataSpatial@bbox[1,1]-n,dataSpatial@bbox[1,2]+n,by = n)
+row <- seq(dataSpatial@bbox[2,1]-n,dataSpatial@bbox[2,2]+n,by = n)
+the.grid <- expand.grid(x = col, y = row)
+coordinates(the.grid) <- ~x+y
+gridded(the.grid) <- T
+
+#Plot grid dan titik-titik data
+par(mar=c(1,1,1,1))
+plot(the.grid, cex=0.5, col="grey")
+points(dataSpatial, pch=1, col='red', cex=1)
+
+# Penaksiran dengan metode ordinary Kriging
+kriging <- krige(konsentrasi_pm2.5~1, dataSpatial, the.grid, model=fit)
+
+# Plot kontur hasil taksiran Kriging
+titik <- SpatialPoints(dataSpatial@coords)
+LayoutPoints <- list('sp.points', titik, pch = 19, cex = 0.8, col = 'red')
+LayoutLabels <- list('sp.pointLabel', titik, label = as.character(dataSpatial[[1]]), 
+                     cex = 0.8, col = 'white')
+spplot(kriging["var1.pred"], main = "Contour Plot", 
+       sp.layout=list(LayoutPoints,LayoutLabels))
+
+```
+
+### Number 5
+
+You want to deliver important interpretation from the contour plot to the king:
+
+1.  What is the concentration of PM2.5 on most of the area in the kingdom? Conclude on whether the air in most of the kingdom's area is safe for human.
+
+2.  In which area the concentration is relatively higher? Is it the same as the answer for number 1?
+
+#### Solution
+
+```{r}
+# Declaring the coordinate of a point to be observed
+dot <- SpatialPoints(cbind(c(106.75), c(-6.270))) # Bebas pilih titik mana aja
+
+# Calculating the estimation of concentration on the location
+(est <- krige(konsentrasi_pm2.5~1, dataSpatial, dot, model=fit)[[1]])
+
+# Plot peta kontur beserta taksirannya
+LayoutPoints.T <- list('sp.points', dot, pch=19, cex=0.8, col='green')
+LayoutLabels.T <- list('sp.pointLabel', dot, label = as.character(est), cex = 
+                         0.8, col = 'white')
+spplot(kriging["var1.pred"], main = "Contour Map & Estimation", 
+       sp.layout=list(LayoutPoints.T,LayoutLabels.T))
+
+```
+
+1.  The concentration of PM~2.5~ at most of the area is around 74,32 μm/g^3^. Because this value exceeds the maximum safe value, the air is not safe for human.
+
+2.  Area around center and north-west of the kingdom has higher concentration values (the color is mostly yellow). This is the same with what is concluded from the scatter plot in number 1.
