@@ -6,7 +6,7 @@ The problem discussed in this project is made as a final test of a session on El
 
 ## Problems and solutions
 
-At a kingdom, there is an increase of fossil and other organic fuels combustion to accomodate city's activity. The king of the kingdom is concerned about the increase of air pollution that might happen. The king consulted with scientists and they warned the king about the increase of PM~2.5~ (particulate matter 2.5) in the air.
+At a kingdom, there is an increase of fossil and other organic fuels combustion to accomodate city's activity. The king is concerned about the increase of air pollution that might happen. The king consulted with scientists and they warned the king about the increase of PM~2.5~ (particulate matter 2.5) in the air.
 
 PM~2.5~ is one of the most dangerous pollutant to human health. Because of its miniscule size, this odorless matter can easily enter and disturb respiratory system. It is known that its safe maximum concentration is 35 μm/g^3^.
 
@@ -84,15 +84,15 @@ the.grid <- expand.grid(x = col, y = row)
 coordinates(the.grid) <- ~x+y
 gridded(the.grid) <- T
 
-#Plot grid dan titik-titik data
+#Plot grid and data points
 par(mar=c(1,1,1,1))
 plot(the.grid, cex=0.5, col="grey")
 points(dataSpatial, pch=1, col='red', cex=1)
 
-# Penaksiran dengan metode ordinary Kriging
+# Fitting with ordinary Kriging method
 kriging <- krige(konsentrasi_pm2.5~1, dataSpatial, the.grid, model=fit)
 
-# Plot kontur hasil taksiran Kriging
+# Plot contour map with Kriging fit result
 titik <- SpatialPoints(dataSpatial@coords)
 LayoutPoints <- list('sp.points', titik, pch = 19, cex = 0.8, col = 'red')
 LayoutLabels <- list('sp.pointLabel', titik, label = as.character(dataSpatial[[1]]), 
@@ -114,12 +114,12 @@ You want to deliver important interpretation from the contour plot to the king:
 
 ```{r}
 # Declaring the coordinate of a point to be observed
-dot <- SpatialPoints(cbind(c(106.75), c(-6.270))) # Bebas pilih titik mana aja
+dot <- SpatialPoints(cbind(c(106.75), c(-6.270))) # You can freely choose other coordinate
 
 # Calculating the estimation of concentration on the location
 (est <- krige(konsentrasi_pm2.5~1, dataSpatial, dot, model=fit)[[1]])
 
-# Plot peta kontur beserta taksirannya
+# Plot contour map with its fit
 LayoutPoints.T <- list('sp.points', dot, pch=19, cex=0.8, col='green')
 LayoutLabels.T <- list('sp.pointLabel', dot, label = as.character(est), cex = 
                          0.8, col = 'white')
